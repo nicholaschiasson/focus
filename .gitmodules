@@ -1,0 +1,3 @@
+[submodule "modules/nai"]
+	path = modules/nai
+	url = https://github.com/nicholaschiasson/nai.git
