@@ -18,6 +18,7 @@ class FocusState(AISearchState):
         self.current_turn = PLAYER_X
         self.PLAYER_X_CAPTURES = 0
         self.PLAYER_O_CAPTURES = 0
+        self.action = "Game start"
         self.state = []
         skip_indices = set([(0, 0), (0, 1), (0, 6), (0, 7), (1, 0), (1, 7), (6, 0), (6, 7), (7, 0), (7, 1), (7, 6), (7, 7)])
         for i, s in enumerate(state_split):
@@ -101,6 +102,7 @@ class FocusState(AISearchState):
                     if p != new_state.current_turn:
                         new_state.PLAYER_X_CAPTURES += 1 if new_state.current_turn == PLAYER_X else 0
                         new_state.PLAYER_O_CAPTURES += 1 if new_state.current_turn == PLAYER_O else 0
+            new_state.action = "Move top " + str(split) + " piece" + ("s" if split != 1 else "") + " from ROW-COL" + str((i1+1, j1+1)) + " to ROW-COL" + str((i2+1, j2+1))
             new_state.advance_turn()
             ret.append(new_state)
         return ret
@@ -149,6 +151,7 @@ def main():
     winner = "Unable to determine winner?"
     turn_number = 1
     while True:
+        print("Previous action: {}".format(state.action))
         print("Current turn: {}".format(turn_number))
         print("Current Player: {}".format(state.current_turn))
         print("Player X captures: {}".format(state.PLAYER_X_CAPTURES))
@@ -161,12 +164,12 @@ def main():
         highest_state = (float("-inf"), state)
         if state.current_turn == PLAYER_X:
             for s in state.get_adjacent_states():
-                v = alphabeta2(s, (most_control_heuristic,), MIN_MAX_SEARCH_DEPTH, maximizingPlayer=False)
+                v = alphabeta(s, (most_control_heuristic,), MIN_MAX_SEARCH_DEPTH)
                 if v >= highest_state[0]:
                     highest_state = (v, s)
         else:
             for s in state.get_adjacent_states():
-                v = alphabeta2(s, (most_control_heuristic,), MIN_MAX_SEARCH_DEPTH, maximizingPlayer=False)
+                v = alphabeta(s, (most_control_heuristic,), MIN_MAX_SEARCH_DEPTH)
                 if v >= highest_state[0]:
                     highest_state = (v, s)
         state = highest_state[1]
