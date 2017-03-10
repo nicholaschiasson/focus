@@ -141,9 +141,23 @@ def most_control_heuristic(state):
                 elif col[-1] == PLAYER_O:
                     o_pieces += 1
     if state.current_turn == PLAYER_X:
-        return x_pieces - o_pieces
+        return x_pieces - o_pieces + state.PLAYER_X_CAPTURES - state.PLAYER_O_CAPTURES
     else:
-        return o_pieces - x_pieces
+        return o_pieces - x_pieces + state.PLAYER_O_CAPTURES - state.PLAYER_X_CAPTURES
+
+def highest_controlled_stacks(state):
+    x_stacks, o_stacks = 0, 0
+    for row in state.state:
+        for col in row:
+            if col != None and len(col) > 1:
+                if col[-1] == PLAYER_X:
+                    x_stacks += len(col) - 1
+                elif col[-1] == PLAYER_O:
+                    o_stacks += len(col) - 1
+    if state.current_turn == PLAYER_X:
+        return x_stacks - o_stacks + state.PLAYER_X_CAPTURES - state.PLAYER_O_CAPTURES
+    else:
+        return o_stacks - x_stacks + state.PLAYER_O_CAPTURES - state.PLAYER_X_CAPTURES
 
 def main():
     random.seed()
@@ -164,12 +178,12 @@ def main():
         highest_state = (float("-inf"), state)
         if state.current_turn == PLAYER_X:
             for s in state.get_adjacent_states():
-                v = alphabeta(s, (most_control_heuristic,), MIN_MAX_SEARCH_DEPTH)
+                v = alphabeta(s, (most_control_heuristic,), MIN_MAX_SEARCH_DEPTH-1)
                 if v >= highest_state[0]:
                     highest_state = (v, s)
         else:
             for s in state.get_adjacent_states():
-                v = alphabeta(s, (most_control_heuristic,), MIN_MAX_SEARCH_DEPTH)
+                v = alphabeta(s, (highest_controlled_stacks,), MIN_MAX_SEARCH_DEPTH-1)
                 if v >= highest_state[0]:
                     highest_state = (v, s)
         state = highest_state[1]
