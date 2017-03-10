@@ -1,9 +1,10 @@
-#!/usr/bin/env pypy2 -B
+#!/usr/bin/env pypy2
+from copy import deepcopy
 import random
 
-import config
+from config import *
 from nai.search.state import AISearchState
-from nai.search.intelligent import alphabeta
+from nai.search.intelligent import alphabeta, alphabeta2
 
 EMPTY_SPACE = "-"
 PLAYER_X      = "X"
@@ -70,7 +71,39 @@ class FocusState(AISearchState):
             return not self.__eq__(other)
         return NotImplemented
     def get_adjacent_states(self):
-        return []
+        ret = []
+        possible_move_locations = []
+        for i in range(len(self.state)):
+            for j in range(len(self.state[i])):
+                if self.state[i][j] == None or len(self.state[i][j]) < 1 or self.state[i][j][-1] != self.current_turn:
+                    continue
+                max_move_distance = len(self.state[i][j])
+                for split in range (1, max_move_distance + 1):
+                    for k in range(1, split + 1):
+                        if i - k >= 0 and self.state[i - k][j] != None:
+                            possible_move_locations.append(((i, j), (i - k, j), split))
+                        if i + k < 8 and self.state[i + k][j] != None:
+                            possible_move_locations.append(((i, j), (i + k, j), split))
+                        if j - k >= 0 and self.state[i][j - k] != None:
+                            possible_move_locations.append(((i, j), (i, j - k), split))
+                        if j + k < 8 and self.state[i][j + k] != None:
+                            possible_move_locations.append(((i, j), (i, j + k), split))
+        for (i1, j1), (i2, j2), split in possible_move_locations:
+            new_state = deepcopy(self)
+            old_len = len(new_state.state[i1][j1])
+            new_state.state[i2][j2] += new_state.state[i1][j1][old_len-split:]
+            new_state.state[i1][j1] = new_state.state[i1][j1][:old_len-split]
+            moved_len = len(new_state.state[i2][j2])
+            if moved_len > 5:
+                captured_pieces = new_state.state[i2][j2][:moved_len-5]
+                new_state.state[i2][j2] = new_state.state[i2][j2][moved_len-5:]
+                for p in captured_pieces:
+                    if p != new_state.current_turn:
+                        new_state.PLAYER_X_CAPTURES += 1 if new_state.current_turn == PLAYER_X else 0
+                        new_state.PLAYER_O_CAPTURES += 1 if new_state.current_turn == PLAYER_O else 0
+            new_state.advance_turn()
+            ret.append(new_state)
+        return ret
     def get_goal(self):
         return self
     def get_transition_cost(self, other):
@@ -96,28 +129,56 @@ class FocusState(AISearchState):
     def advance_turn(self):
         self.current_turn = PLAYER_X if self.current_turn == PLAYER_O else PLAYER_O
 
+def most_control_heuristic(state):
+    x_pieces, o_pieces = 0, 0
+    for row in state.state:
+        for col in row:
+            if col != None and len(col) > 0:
+                if col[-1] == PLAYER_X:
+                    x_pieces += 1
+                elif col[-1] == PLAYER_O:
+                    o_pieces += 1
+    if state.current_turn == PLAYER_X:
+        return x_pieces - o_pieces
+    else:
+        return o_pieces - x_pieces
+
 def main():
     random.seed()
     state = FocusState.new_game()
     winner = "Unable to determine winner?"
+    turn_number = 1
     while True:
-        print("Current turn: {}".format(state.current_turn))
+        print("Current turn: {}".format(turn_number))
+        print("Current Player: {}".format(state.current_turn))
         print("Player X captures: {}".format(state.PLAYER_X_CAPTURES))
         print("Player O captures: {}".format(state.PLAYER_O_CAPTURES))
         print(state)
         print
         if len(state.get_adjacent_states()) < 1 or state.PLAYER_X_CAPTURES >= WIN_CONDITION_CAPTURE_LIMIT or state.PLAYER_O_CAPTURES >= WIN_CONDITION_CAPTURE_LIMIT:
             break
-        state = alphabeta(state, (), MIN_MAX_SEARCH_DEPTH)
+        turn_number += 1
+        highest_state = (float("-inf"), state)
+        if state.current_turn == PLAYER_X:
+            for s in state.get_adjacent_states():
+                v = alphabeta2(s, (most_control_heuristic,), MIN_MAX_SEARCH_DEPTH, maximizingPlayer=False)
+                if v >= highest_state[0]:
+                    highest_state = (v, s)
+        else:
+            for s in state.get_adjacent_states():
+                v = alphabeta2(s, (most_control_heuristic,), MIN_MAX_SEARCH_DEPTH, maximizingPlayer=False)
+                if v >= highest_state[0]:
+                    highest_state = (v, s)
+        state = highest_state[1]
     if len(state.get_adjacent_states()) < 1:
         print("Player {} is unable to make a valid move".format(state.current_turn))
         state.advance_turn()
         winner = "Player {}".format(state.current_turn)
     elif state.PLAYER_X_CAPTURES >= WIN_CONDITION_CAPTURE_LIMIT:
-        print("Player {} has met the win condition of capturing {} pieces".format(PLAYER_X, WIN_CONDITION_CAPTURE_LIMIT))
+        print("Player {} has met the winning condition of capturing {} piece{}".format(PLAYER_X, WIN_CONDITION_CAPTURE_LIMIT, "s" if WIN_CONDITION_CAPTURE_LIMIT != 1 else ""))
         winner = "Player X"
     elif state.PLAYER_O_CAPTURES >= WIN_CONDITION_CAPTURE_LIMIT:
-        print("Player {} has met the win condition of capturing {} pieces".format(PLAYER_O, WIN_CONDITION_CAPTURE_LIMIT))
+        print("Player {} has met the winning condition of capturing {} piece{}".format(PLAYER_O, WIN_CONDITION_CAPTURE_LIMIT, "s" if WIN_CONDITION_CAPTURE_LIMIT != 1 else ""))
         winner = "Player O"
     print("Winner: {}".format(winner))
 

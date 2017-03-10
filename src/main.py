@@ -1,4 +1,4 @@
-#!/usr/bin/env pypy2 -B
+#!/usr/bin/env pypy2
 import modulepaths
 import focus
 
