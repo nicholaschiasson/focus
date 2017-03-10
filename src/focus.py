@@ -149,11 +149,13 @@ def highest_controlled_stacks(state):
     x_stacks, o_stacks = 0, 0
     for row in state.state:
         for col in row:
-            if col != None and len(col) > 1:
-                if col[-1] == PLAYER_X:
-                    x_stacks += len(col) - 1
-                elif col[-1] == PLAYER_O:
-                    o_stacks += len(col) - 1
+            if col != None:
+                l = len(col)
+                if l > 1:
+                    if col[-1] == PLAYER_X:
+                        x_stacks += l - 1
+                    elif col[-1] == PLAYER_O:
+                        o_stacks += l - 1
     if state.current_turn == PLAYER_X:
         return x_stacks - o_stacks + state.PLAYER_X_CAPTURES - state.PLAYER_O_CAPTURES
     else:
@@ -176,16 +178,14 @@ def main():
             break
         turn_number += 1
         highest_state = (float("-inf"), state)
-        if state.current_turn == PLAYER_X:
-            for s in state.get_adjacent_states():
+        for s in state.get_adjacent_states():
+            v = 0
+            if state.current_turn == PLAYER_X:
                 v = alphabeta(s, (most_control_heuristic,), MIN_MAX_SEARCH_DEPTH-1)
-                if v >= highest_state[0]:
-                    highest_state = (v, s)
-        else:
-            for s in state.get_adjacent_states():
+            else:
                 v = alphabeta(s, (highest_controlled_stacks,), MIN_MAX_SEARCH_DEPTH-1)
-                if v >= highest_state[0]:
-                    highest_state = (v, s)
+            if v >= highest_state[0]:
+                highest_state = (v, s)
         state = highest_state[1]
     if len(state.get_adjacent_states()) < 1:
         print("Player {} is unable to make a valid move".format(state.current_turn))
