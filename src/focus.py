@@ -4,7 +4,7 @@ import random
 
 from config import *
 from nai.search.state import AISearchState
-from nai.search.intelligent import alphabeta, alphabeta2
+from nai.search.intelligent import alphabeta
 
 EMPTY_SPACE = "-"
 PLAYER_X      = "X"
